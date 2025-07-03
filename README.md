@@ -115,15 +115,6 @@ Then open your browser at [http://localhost:3838](http://localhost:3838)
 
 ---
 
-## Author
-
-**Rezgar Arabzadeh**
-University of Waterloo
-📧 [rarabzad@uwaterloo.ca](mailto:rarabzad@uwaterloo.ca)
-🔗 [github.com/rarabzad](https://github.com/rarabzad)
-
----
-
 ## Links
 
 * 🔗 [Live Demo (if hosted)](https://your.shinyapps.io/url)
