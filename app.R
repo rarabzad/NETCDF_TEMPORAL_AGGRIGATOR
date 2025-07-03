@@ -5,6 +5,7 @@ library(zip)
 library(ncdf4)
 library(fields)    
 library(viridisLite)
+library(lubridate)
 
 # Source the aggregator function
 source("https://raw.githubusercontent.com/rarabzad/RDRS/refs/heads/main/scripts/rdrs_ncdf_aggregator.R")
