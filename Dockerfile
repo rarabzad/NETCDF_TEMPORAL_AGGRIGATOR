@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install R packages
-RUN R -e "install.packages(c('shiny', 'shinyjs', 'DT', 'zip', 'ncdf4', 'fields', 'viridisLite', 'lubridate'), repos='https://cloud.r-project.org')"
+RUN R -e "install.packages(c('shiny', 'shinyjs', 'DT', 'zip', 'ncdf4', 'fields', 'viridisLite', 'lubridate', 'progress'), repos='https://cloud.r-project.org')"
 
 # Create app directory
 RUN mkdir -p /srv/shiny-server/app
