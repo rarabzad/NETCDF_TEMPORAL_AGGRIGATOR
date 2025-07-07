@@ -13,41 +13,48 @@ source("https://raw.githubusercontent.com/rarabzad/RDRS/refs/heads/main/scripts/
 options(shiny.maxRequestSize = 500 * 1024^2)  # 500 MB limit
 ui <- fluidPage(
   useShinyjs(),
-  tags$head(tags$style(HTML("
-    .selectize-control.single .selectize-input {
-      overflow: hidden !important;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .selectize-dropdown {
-      position: absolute !important;
-      width: auto !important;
-      min-width: 100% !important;
-      max-width: 600px !important;
-      z-index: 2000 !important;
-    }
-    .shiny-input-container { overflow: visible !important; }
+  tags$head(
+    tags$style(HTML("
+      .selectize-control.single .selectize-input {
+        overflow: hidden !important;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .selectize-dropdown {
+        position: absolute !important;
+        width: auto !important;
+        min-width: 100% !important;
+        max-width: 600px !important;
+        z-index: 2000 !important;
+      }
+      .shiny-input-container { overflow: visible !important; }
 
-    /* make our matrix-input scrollable inside sidebar */
-    .matrix-wrapper {
-      overflow-x: auto;
-      padding-bottom: 5px;
-    }
-    table.matrix-input {
-      width: auto;
-      min-width: 100%;
-      border-collapse: collapse;
-    }
-    table.matrix-input th, table.matrix-input td {
-      padding: 4px 8px;
-      border: 1px solid #ddd;
-      white-space: nowrap;
-    }
-    table.matrix-input th {
-      background: #f8f8f8;
-      text-align: left;
-    }
-  "))),
+      /* make our matrix-input scrollable inside sidebar */
+      .matrix-wrapper {
+        overflow-x: auto;
+        padding-bottom: 5px;
+      }
+      table.matrix-input {
+        width: auto;
+        min-width: 100%;
+        border-collapse: collapse;
+      }
+      table.matrix-input th, table.matrix-input td {
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        white-space: nowrap;
+      }
+      table.matrix-input th {
+        background: #f8f8f8;
+        text-align: left;
+      }
+    ")),
+    tags$script(HTML('
+      $(function () {
+        $("[data-toggle=\'popover\']").popover();
+      });
+    '))
+  ),
   
   tags$div(
     style = "display: flex; align-items: center; gap: 15px; margin-bottom: 20px;",
@@ -57,18 +64,106 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      fileInput("nc_zip", "Upload NetCDF ZIP Archive", accept = ".zip"),
-      numericInput("n_vars", "Number of Variables to Aggregate", 1, min = 1),
+      fileInput("nc_zip", 
+                label = tagList(
+                  "Upload NetCDF ZIP Archive",
+                  tags$span(
+                    icon("question-circle"),
+                    style = "color: #007bff; cursor: pointer;",
+                    `data-toggle` = "popover",
+                    `data-trigger` = "hover",
+                    `data-placement` = "right",
+                    `data-content` = "Upload a ZIP archive containing RDRS NetCDF (.nc) files. Files must end with YYYYMMDD12.nc."
+                  )
+                ),
+                accept = ".zip"
+      ),
       
-      # scrollable wrapper around the matrix
-      div(class="matrix-wrapper", uiOutput("var_matrix")),
+      numericInput("n_vars",
+                   label = tagList(
+                     "Number of Variables to Aggregate",
+                     tags$span(
+                       icon("question-circle"),
+                       style = "color: #007bff; cursor: pointer;",
+                       `data-toggle` = "popover",
+                       `data-trigger` = "hover",
+                       `data-placement` = "right",
+                       `data-content` = "Specify how many different variables you want to aggregate (can include repeats)."
+                     )
+                   ),
+                   value = 1, min = 1
+      ),
       
-      numericInput("time_shift", "Time Shift (hours)", 0),
-      numericInput("agg_length", "Aggregation Length (hours)", 24, min = 1),
-      checkboxInput("agg_gph", "Aggregate Geopotential", FALSE),
+      tags$div(
+        style = "margin-bottom: 5px;",
+        tagList(
+          tags$label("Variables to Aggregate"),
+          tags$span(
+            icon("question-circle"),
+            style = "color: #007bff; cursor: pointer;",
+            `data-toggle` = "popover",
+            `data-trigger` = "hover",
+            `data-placement` = "right",
+            `data-content` = "Configure each variable to aggregate: select the variable, aggregation function, output unit, and a post-aggregation multiplication factor (i.e. use 1000 to convert 'm' to 'mm')."
+          )
+        )
+      ),
+      div(class = "matrix-wrapper", uiOutput("var_matrix")),
+      
+      numericInput("time_shift",
+                   label = tagList(
+                     "Time Shift (hours)",
+                     tags$span(
+                       icon("question-circle"),
+                       style = "color: #007bff; cursor: pointer;",
+                       `data-toggle` = "popover",
+                       `data-trigger` = "hover",
+                       `data-placement` = "right",
+                       `data-content` = "Shift input data time series by this many hours (for timezone correction from UTC to local time)."
+                     )
+                   ),
+                   value = 0
+      ),
+      
+      numericInput("agg_length",
+                   label = tagList(
+                     "Aggregation Length (hours)",
+                     tags$span(
+                       icon("question-circle"),
+                       style = "color: #007bff; cursor: pointer;",
+                       `data-toggle` = "popover",
+                       `data-trigger` = "hover",
+                       `data-placement` = "right",
+                       `data-content` = "Number of hours in each aggregation block (e.g.,6 for quarter a day, 24 for daily, 168 for weekly)."
+                     )
+                   ),
+                   value = 24, min = 1
+      ),
+      
+      checkboxInput("agg_gph",
+                    label = tagList(
+                      "Aggregate Geopotential",
+                      tags$span(
+                        icon("question-circle"),
+                        style = "color: #007bff; cursor: pointer;",
+                        `data-toggle` = "popover",
+                        `data-trigger` = "hover",
+                        `data-placement` = "right",
+                        `data-content` = "If checked, aggregates the Geopotential Height variable across time and converts it to Geopotential elevation (MASL)."
+                      )
+                    ),
+                    value = FALSE
+      ),
+      
       actionButton("run", "Run Aggregation", icon = icon("play")),
       br(), br(),
-      downloadButton("download_results", "Download Results ZIP")
+      downloadButton("download_results", "Download Results ZIP"),
+      br(), br(),
+      tags$p(
+        "For more information and sample data ",
+        tags$a(href = "https://github.com/rarabzad/GridWeightsGenerator/tree/main",
+               "click here", target = "_blank")
+      )
     ),
     
     mainPanel(
@@ -98,20 +193,39 @@ server <- function(input, output, session) {
   observeEvent(input$nc_zip, {
     req(input$nc_zip)
     append_log("Unzipping archive…")
+    
     td <- tempfile("ncdir_"); dir.create(td)
     unzip(input$nc_zip$datapath, exdir = td)
     temp_dir(td)
     
-    ncs <- list.files(td, "\\.nc$", full.names=TRUE, recursive=TRUE)
+    ncs <- list.files(td, "\\.nc$", full.names = TRUE, recursive = TRUE)
     if (!length(ncs)) return(append_log("No NetCDF files found."))
     
     nc <- nc_open(ncs[[1]])
-    vars <- names(nc$var)
+    all_vars <- names(nc$var)
+    
+    # Extract and filter variables
+    vars <- all_vars[!(grepl("lat", all_vars) | grepl("lon", all_vars) | grepl("rotated_pole", all_vars))]
     available_vars(vars)
-    available_units(as.list(sapply(vars, function(v){
+    
+    # Extract units
+    available_units(as.list(sapply(vars, function(v) {
       att <- ncatt_get(nc, v, "units")$value
       if (is.null(att)) "" else att
-    }, USE.NAMES=TRUE)))
+    }, USE.NAMES = TRUE)))
+    
+    # Try to set time zone offset based on lon variable
+    if ("lon" %in% all_vars) {
+      lon_vals <- ncvar_get(nc, "lon")
+      if (!is.null(lon_vals)) {
+        mean_lon <- mean(lon_vals, na.rm = TRUE)
+        tz_offset <- round(mean_lon / 15)  # Longitude to UTC offset
+        tz_offset<-ifelse(tz_offset<0,-tz_offset,-tz_offset)
+        updateNumericInput(session, "time_shift", value = tz_offset)
+        append_log(sprintf("Set default time shift to UTC %+d based on mean longitude %.2f.", tz_offset, mean_lon))
+      }
+    }
+    
     nc_close(nc)
     append_log(sprintf("Found %d files, %d variables.", length(ncs), length(vars)))
   })
