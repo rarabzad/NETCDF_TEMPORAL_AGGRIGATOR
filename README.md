@@ -117,6 +117,6 @@ Then open your browser at [http://localhost:3838](http://localhost:3838)
 
 ## Links
 
-* 🔗 [Live Demo (if hosted)](https://your.shinyapps.io/url)
+* 🔗 [Live Demo](https://raven-rdrs-aggrigator.share.connect.posit.cloud))
 * 🔗 [Function Script](https://github.com/rarabzad/RDRS/blob/main/scripts/rdrs_ncdf_aggregator.R)
 
