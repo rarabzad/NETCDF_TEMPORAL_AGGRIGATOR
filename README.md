@@ -1,11 +1,11 @@
-# RDRS NetCDF Aggregator
+# NetCDF Temporal Aggregator
 
 ![Shiny App](https://img.shields.io/badge/built%20with-shiny-FF69B4.svg)
 ![R](https://img.shields.io/badge/R-4.3.1-blue)
 
 ## Overview
 
-The **RDRS NetCDF Aggregator** is an interactive [Shiny](https://shiny.posit.co/) web application designed to process and aggregate **hourly NetCDF datasets from Environment and Climate Change Canada's Regional Deterministic Reforecast System (RDRS v2.1)**. It allows users to upload zipped NetCDF files, select variables, apply aggregation functions (e.g., mean, sum), and download coarsened time-resolution output NetCDF files along with Raven-compatible `.rvt` files.
+The **NetCDF Temporal Aggregator** is an interactive [Shiny](https://shiny.posit.co/) web application designed to process and aggregate **hourly NetCDF datasets from Environment and Climate Change Canada's (RDRS v2.1 and CaSR v3.1)**  It allows users to upload zipped NetCDF files, select variables, apply aggregation functions (e.g., mean, sum), and download coarsened time-resolution output NetCDF files along with Raven-compatible `.rvt` files.
 
 This tool was developed to streamline the generation of daily, weekly, or custom temporal aggregations for hydrologic and climate modeling purposes.
 
@@ -13,11 +13,11 @@ This tool was developed to streamline the generation of daily, weekly, or custom
 
 ## Features
 
-- 📦 Upload zipped folders of hourly RDRS NetCDF files
+- 📦 Upload zipped folders of hourly RDRS NetCDF files/single NetCDF of CaSR
 - 📊 Select multiple variables and aggregation functions
 - 🕒 Apply custom time shifts and aggregation lengths
 - 🧮 Generates coarsened time resolution NetCDF output
-- 📥 Download results as a ZIP including `.nc`, `.csv`, `.txt`, and `.rvt` files
+- 📥 Download results as a ZIP including `.nc`, `.csv` (for RDRS only), `.txt`, and `.rvt` files
 - 🌐 View mean field plots interactively inside the browser
 
 ---
@@ -50,7 +50,7 @@ shiny::runApp("app.R")
 ### 1. Upload Your Data
 
 * Click "Upload NetCDF ZIP Archive" and select your `.zip` file containing hourly RDRS `.nc` files.
-* Files should follow the naming pattern: `YYYYMMDD12.nc` (e.g., `2015060112.nc`)
+* Files should follow the naming pattern: `YYYYMMDD12.nc` (e.g., `2015060112.nc`) (not required for CaSR data)
 
 ### 2. Configure Aggregation
 
@@ -92,7 +92,7 @@ After aggregation, the following files are included in the downloadable zip:
 
 This app wraps around the [`rdrs_ncdf_aggregator()`](https://github.com/rarabzad/RDRS/blob/main/scripts/rdrs_ncdf_aggregator.R) function, which performs the following steps:
 
-1. **Reads and verifies** all NetCDF files in the uploaded archive
+1. **Reads and verifies** all NetCDF files in the uploaded archive (for RDRS only)
 2. **Extracts and aggregates** specified variables across time using the desired function
 3. **Handles time alignment and shifting** based on the user input
 4. **Creates output NetCDF**, including metadata and derived variables
