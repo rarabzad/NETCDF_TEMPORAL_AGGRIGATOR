@@ -81,25 +81,26 @@ casr_aggregator <- function(
   if(is.null(var_units))
   {
     var_units<-unlist(lapply(var,function(v) ncatt_get(nc, v, "units")$value))
-    names(var_units)<-var
+    names(var_units)<-paste0(fun,"_",var)
     message("`var_units` not provided. Using existing units for the selected variables: ", paste0(sprintf("%s [%s]",var,var_units),collapse = ", "))
   }else{
     if(!(is.vector(var_units) & length(var_units)==length(var))) stop("the length of the select variables and the vector of units must be the same!")
-    names(var_units)<-var
+    names(var_units)<-paste0(fun,"_",var)
   }
   
   if(is.null(aggregationFactor))
   {
     aggregationFactor<-rep(1,length(var))
-    names(aggregationFactor)<-var
+    names(aggregationFactor)<-paste0(fun,"_",var)
     message("`aggregationFactor` not provided. Using 1 as the factor of aggregation for all variables" )
   }else{
-    names(aggregationFactor)<-var
+    names(aggregationFactor)<-paste0(fun,"_",var)
     if(length(aggregationFactor)!=length(var)) stop("the length of the select variables and the vector of aggregation factors must be the same!")
   }
   
   # Ensure provided variables exist
-  if (!all(var %in% vars_all)) {
+  if (!all(var %in% vars_all))
+  {
     invalid <- var[!var %in% vars_all]
     stop("The following variables are not in the NetCDF file: ", paste(invalid, collapse = ", "))
   }
@@ -121,9 +122,12 @@ casr_aggregator <- function(
       var<-var[!duplicated(var)]
       message("duplicated variables are discarded when fun is missing!")
     }
-    fun<-setNames(rep(list(mean), length(var)), var)
+    func_names<-rep("mean",length(var))
+    names(func_names)<-var
+    fun<-setNames(rep(list(mean), length(var)), paste0("mean_",var))
     message("`fun` not provided. Using mean for all variables.")
   } else {
+    tmp_names<-paste0(fun,"_",var)
     # Handle unnamed or partial named lists
     if (!any(!is.list(fun) | !is.vector(fun))) stop("`fun` must be a list/vector.")
     # Expand to allow duplicated vars with different functions
@@ -131,8 +135,10 @@ casr_aggregator <- function(
       stop("Length of `fun` list must match `var`. Duplicate `var` entries require corresponding `fun` entries.")
     }
     if(any(!(fun %in% c("min","max","mean","sum")))) stop(sprintf("Invalid function provided: %s", paste0(fun[!(fun %in% c("min","max","mean","sum"))], collapse = ", ")))
+    func_names<-fun
+    names(func_names)<-var
     fun<-lapply(fun, match.fun)
-    names(fun)<-var
+    names(fun)<-tmp_names
   }
   
   lon_vals <- ncvar_get(nc, ifelse(any(c("lon", "longitude") %in% vars_all), intersect(c("lon","longitude"), vars_all)[1], space_dims[grepl("lon", space_dims, ignore.case=TRUE)][1]))
@@ -178,9 +184,10 @@ casr_aggregator <- function(
           if (identical(f, sum)) "sum" else
             "unknown"}),"_",var)
   names(var_names)<-names(fun)
-  var_defs <- lapply(var, function(v)
+  var_defs<-list()
+  for(i in 1:length(var))
   {
-    vinfo <- nc$var[[v]]
+    vinfo <- nc$var[[var[i]]]
     orig_dim_order <- sapply(vinfo$dim, function(x) x$name)
     out_dims <- lapply(orig_dim_order, function(dn) dim_defs[[dn]])
     chunks <- sapply(orig_dim_order, function(dn)
@@ -188,17 +195,18 @@ casr_aggregator <- function(
       dim_len <- length(dim_defs[[dn]]$vals)
       if (dn == time_dim) 1 else min(10, dim_len)
     })
-    ncvar_def(
-      name = var_names[v],
-      units = var_units[v],
-      dim = out_dims,
-      missval = if (!is.null(vinfo$missval)) vinfo$missval else NA,
-      prec = "float",
-      chunksizes = chunks,
-      compression = 1
-    )
-  })
-  names(var_defs)<-var
+    var_defs[[i]]<-
+      ncvar_def(
+        name = var_names[i],
+        units = var_units[i],
+        dim = out_dims,
+        missval = if (!is.null(vinfo$missval)) vinfo$missval else NA,
+        prec = "float",
+        chunksizes = chunks,
+        compression = 1
+      )
+  }
+  names(var_defs)<-var_names
   if(!is.null(gp_var))
   {
     gpe_dims<-unlist(lapply(nc$var[[gp_var]]$dim,function(x) x$name))
@@ -215,13 +223,13 @@ casr_aggregator <- function(
   ncnew <- nc_create(outputfile, var_defs)
   for (i in seq_along(var))
   {
-    cat(sprintf("aggregating: %s\n",var[i]))
+    cat(sprintf("aggregating period %s of: %s\n",func_names[i],var[i]))
     var_dims<-unlist(lapply(nc$var[[var[i]]]$dim, function(x) x$name))
     time_dim_id<-match(time_dim,var_dims)
     space_dim_id<-match(space_dims,var_dims)
     names(space_dims)<-space_dim_id
     names(time_dim)<-time_dim_id
-    varid<-var_defs[[match(var[i],names(var_defs))]]
+    varid<-var_defs[[match(var_names[i],names(var_defs))]]
     pb_time <- txtProgressBar(min = 0, max = length(times_id_grouped), style = 3)
     for(t in 1:length(times_id_grouped))
     {
@@ -237,7 +245,7 @@ casr_aggregator <- function(
       names(space_count)<-names(space_dims)
       count<-c(time_count,space_count)
       count<-count[order(names(count))]
-      vals<-apply(ncvar_get(nc,var[i],start = start,count = count),1:2,fun[[var[i]]])*aggregationFactor[var[i]]
+      vals<-apply(ncvar_get(nc,var[i],start = start,count = count),1:2,fun[[var_names[i]]])*aggregationFactor[var_names[i]]
       count[time_dim_id]<-1
       start[space_dim_id]<-1
       start[time_dim_id]<-t
@@ -290,7 +298,6 @@ casr_aggregator <- function(
   ncatt_put(ncnew, 0, "location", "Waterloo, Canada")
   ncatt_put(ncnew, 0, "history", paste("Created on", Sys.time()))
   ncatt_put(ncnew, 0, "Conventions", "CF-1.6")
-  nc_close(nc)
   
   writeLines(text = capture.output(ncnew),
              con = file.path(dirname(outputfile), paste0(gsub(".nc","",outputfile),"_content.txt")))
@@ -307,20 +314,25 @@ casr_aggregator <- function(
   {
     variableBlocks_tmp<-variableBlocks
     variableBlocks_tmp<-gsub("netcdf_path",outputfile,variableBlocks_tmp)
-    variableBlocks_tmp<-gsub("var_name",var[i],variableBlocks_tmp)
+    variableBlocks_tmp<-gsub("var_name",var_names[i],variableBlocks_tmp)
     if(!is.null(gp_var))
     {
       variableBlocks_tmp<-gsub("gpe_var","Geopotential_Elevation",variableBlocks_tmp)
     }else{
       variableBlocks_tmp<-variableBlocks_tmp[-grep("gpe_var",variableBlocks_tmp)]
       
-      dimNames<-paste0(unlist(lapply(nc$var[[var[i]]]$dim, function(x) x$name)),collapse = " ")
+      dimNames<-paste0(unlist(lapply(ncnew$var[[var_names[i]]]$dim, function(x) x$name)),collapse = " ")
       variableBlocks_tmp<-gsub("dims",dimNames,variableBlocks_tmp)
       rvt<-c(rvt,variableBlocks_tmp)
     }
-    writeLines(text = rvt, con = file.path(dirname(outputfile), "model.rvt"), append = file.exists(file.path(dirname(outputfile), "model.rvt")))
-    nc_close(ncnew)
-    nc_close(nc)
-    message("✅ Aggregated NetCDF written to: ", outputfile)
+    cat(
+      rvt,
+      file   = file.path(dirname(outputfile), "model.rvt"),
+      sep    = "\n",
+      append = file.exists(file.path(dirname(outputfile), "model.rvt"))
+    )
   }
+  nc_close(ncnew)
+  nc_close(nc)
+  message("✅ Aggregated NetCDF written to: ", outputfile)
 }
