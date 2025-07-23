@@ -10,8 +10,7 @@ library(progress)
 
 # Source the aggregator function
 source("https://raw.githubusercontent.com/rarabzad/RDRS/refs/heads/main/scripts/rdrs_ncdf_aggregator.R")
-source("https://raw.githubusercontent.com/rarabzad/RDRS_NETCDF_AGGRIGATOR/refs/heads/main/casr_aggregator.R")
-options(shiny.maxRequestSize = 5 * 1024^3)    # 5GB limit
+options(shiny.maxRequestSize = 500 * 1024^2)  # 500 MB limit
 ui <- fluidPage(
   useShinyjs(),
   tags$head(
@@ -60,11 +59,7 @@ ui <- fluidPage(
   tags$div(
     style = "display: flex; align-items: center; gap: 15px; margin-bottom: 20px;",
     tags$img(src = "logo.png", width = "100px", style = "border-radius: 20px;"),
-    tags$h2("NetCDF Temporal Aggregator", style = "margin: 0;"),
-    tags$p(
-  "This tool allows you to process gridded climate data from either RDRS v2.1 (as a ZIP of NetCDF files) or CaSR v3.1 (as a single NetCDF file). You can select variables of interest, apply aggregation methods over time, and convert units or apply scaling factors. The output is a NetCDF file containing the aggregated results as well as a draft of Raven complaint ".rvt" file.",
-  style = "font-size: 1.2em; color: #555;"
-)
+    tags$h2("RDRS NetCDF Aggregator", style = "margin: 0;")
   ),
   
   sidebarLayout(
@@ -184,39 +179,54 @@ server <- function(input, output, session) {
   available_units<- reactiveVal(list())
   index_df       <- reactiveVal(NULL)
   busy           <- reactiveVal(FALSE)
+  observe({
+    input$data_type
+    shinyjs::runjs("$(function(){ $('[data-toggle=\"popover\"]').popover(); });")
+  })
   
   output$dynamic_file_input <- renderUI({
-    if (is.null(input$data_type) || input$data_type == "rdrs") {
-      fileInput("nc_zip", 
+    # build the correct fileInput widget
+    ui <- if (is.null(input$data_type) || input$data_type == "rdrs") {
+      fileInput("nc_zip",
                 label = tagList(
                   "Upload NetCDF ZIP Archive",
                   tags$span(
-                    icon("question-circle"),
-                    style = "color: #007bff; cursor = pointer;",
-                    `data-toggle` = "popover",
+                    icon("question-circle", style="color: #007bff; cursor: pointer;"),
+                    title = "",               # must have a title attr
+                    `data-toggle`  = "popover",
                     `data-trigger` = "hover",
-                    `data-placement` = "right",
-                    `data-content` = "Upload a ZIP archive containing RDRS NetCDF (.nc) files. Files must end with YYYYMMDD12.nc."
+                    `data-placement`= "right",
+                    `data-content`  = "Upload a ZIP archive containing RDRS NetCDF (.nc) files. Files must end with YYYYMMDD12.nc."
                   )
                 ),
-                accept = ".zip"
+                accept = c(".zip")
       )
     } else {
-      fileInput("nc_file", 
+      fileInput("nc_file",
                 label = tagList(
                   "Upload Single CaSR NetCDF File",
                   tags$span(
                     icon("question-circle"),
-                    style = "color: #007bff; cursor = pointer;",
-                    `data-toggle` = "popover",
+                    title = "",               # must have a title attr
+                    `data-toggle`  = "popover",
                     `data-trigger` = "hover",
-                    `data-placement` = "right",
-                    `data-content` = "Upload a single NetCDF file for CaSR v3.1 data."
+                    `data-placement`= "right",
+                    `data-content`  = "Upload a single NetCDF file for CaSR v3.1 data."
                   )
                 ),
-                accept = ".nc"
+                accept = c(".nc")
       )
     }
+    
+    # wrap in tagList() and include a script snippet that re‐binds popovers
+    tagList(
+      ui,
+      tags$script(HTML('
+  $(function(){
+    $("[data-toggle=\\"popover\\"]").popover();
+  });
+'))
+    )
   })
   
   
