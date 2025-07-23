@@ -59,7 +59,7 @@ casr_aggregator <- function(
   # Validate time shift
   if(is.null(time_shift)) time_shift<-0
   if (!is.numeric(time_shift) || length(time_shift) != 1) stop("`time_shift` must be a single numeric value (in hours).")
-
+  
   # Detect all variables with both time and spatial dimensions
   vars_with_time_space <- Filter(function(vname) {
     dims <- sapply(nc$var[[vname]]$dim, function(x) x$name)
@@ -313,13 +313,14 @@ casr_aggregator <- function(
       variableBlocks_tmp<-gsub("gpe_var","Geopotential_Elevation",variableBlocks_tmp)
     }else{
       variableBlocks_tmp<-variableBlocks_tmp[-grep("gpe_var",variableBlocks_tmp)]
-    
-    dimNames<-paste0(unlist(lapply(nc$var[[var[i]]]$dim, function(x) x$name)),collapse = " ")
-    variableBlocks_tmp<-gsub("dims",dimNames,variableBlocks_tmp)
-    rvt<-c(rvt,variableBlocks_tmp)
+      
+      dimNames<-paste0(unlist(lapply(nc$var[[var[i]]]$dim, function(x) x$name)),collapse = " ")
+      variableBlocks_tmp<-gsub("dims",dimNames,variableBlocks_tmp)
+      rvt<-c(rvt,variableBlocks_tmp)
+    }
+    writeLines(text = rvt, con = file.path(dirname(outputfile), "model.rvt"), append = file.exists(file.path(dirname(outputfile), "model.rvt")))
+    nc_close(ncnew)
+    nc_close(nc)
+    message("✅ Aggregated NetCDF written to: ", outputfile)
   }
-  writeLines(text = rvt, con = file.path(dirname(outputfile), "model.rvt"), append = file.exists(file.path(dirname(outputfile), "model.rvt")))
-  nc_close(ncnew)
-  nc_close(nc)
-  message("✅ Aggregated NetCDF written to: ", outputfile)
 }
