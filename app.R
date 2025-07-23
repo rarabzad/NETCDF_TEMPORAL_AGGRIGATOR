@@ -60,7 +60,11 @@ ui <- fluidPage(
   tags$div(
     style = "display: flex; align-items: center; gap: 15px; margin-bottom: 20px;",
     tags$img(src = "logo.png", width = "100px", style = "border-radius: 20px;"),
-    tags$h2("RDRS NetCDF Aggregator", style = "margin: 0;")
+    tags$h2("NetCDF Temporal Aggregator", style = "margin: 0;"),
+    tags$p(
+  "This tool allows you to process gridded climate data from either RDRS v2.1 (as a ZIP of NetCDF files) or CaSR v3.1 (as a single NetCDF file). You can select variables of interest, apply aggregation methods over time, and convert units or apply scaling factors. The output is a NetCDF file containing the aggregated results as well as a draft of Raven complaint ".rvt" file.",
+  style = "font-size: 1.2em; color: #555;"
+)
   ),
   
   sidebarLayout(
