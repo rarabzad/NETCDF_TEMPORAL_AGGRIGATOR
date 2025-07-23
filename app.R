@@ -10,7 +10,8 @@ library(progress)
 
 # Source the aggregator function
 source("https://raw.githubusercontent.com/rarabzad/RDRS/refs/heads/main/scripts/rdrs_ncdf_aggregator.R")
-options(shiny.maxRequestSize = 500 * 1024^2)  # 500 MB limit
+source("https://raw.githubusercontent.com/rarabzad/RDRS_NETCDF_AGGRIGATOR/refs/heads/main/casr_aggregator.R")
+options(shiny.maxRequestSize = 5 * 1024^3)    # 5GB limit
 ui <- fluidPage(
   useShinyjs(),
   tags$head(
@@ -64,21 +65,17 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      fileInput("nc_zip", 
-                label = tagList(
-                  "Upload NetCDF ZIP Archive",
-                  tags$span(
-                    icon("question-circle"),
-                    style = "color: #007bff; cursor: pointer;",
-                    `data-toggle` = "popover",
-                    `data-trigger` = "hover",
-                    `data-placement` = "right",
-                    `data-content` = "Upload a ZIP archive containing RDRS NetCDF (.nc) files. Files must end with YYYYMMDD12.nc."
-                  )
-                ),
-                accept = ".zip"
+      # Add radio buttons to select data type
+      radioButtons(
+        inputId = "data_type",
+        label = "Select Data Source:",
+        choices = c("RDRS v2.1 (ZIP)" = "rdrs", "CaSR v3.1 (NetCDF)" = "casr"),
+        selected = "rdrs",
+        inline = TRUE
       ),
       
+      # Dynamic file input will show depending on selection
+      uiOutput("dynamic_file_input"),
       numericInput("n_vars",
                    label = tagList(
                      "Number of Variables to Aggregate",
@@ -184,50 +181,117 @@ server <- function(input, output, session) {
   index_df       <- reactiveVal(NULL)
   busy           <- reactiveVal(FALSE)
   
+  output$dynamic_file_input <- renderUI({
+    if (is.null(input$data_type) || input$data_type == "rdrs") {
+      fileInput("nc_zip", 
+                label = tagList(
+                  "Upload NetCDF ZIP Archive",
+                  tags$span(
+                    icon("question-circle"),
+                    style = "color: #007bff; cursor = pointer;",
+                    `data-toggle` = "popover",
+                    `data-trigger` = "hover",
+                    `data-placement` = "right",
+                    `data-content` = "Upload a ZIP archive containing RDRS NetCDF (.nc) files. Files must end with YYYYMMDD12.nc."
+                  )
+                ),
+                accept = ".zip"
+      )
+    } else {
+      fileInput("nc_file", 
+                label = tagList(
+                  "Upload Single CaSR NetCDF File",
+                  tags$span(
+                    icon("question-circle"),
+                    style = "color: #007bff; cursor = pointer;",
+                    `data-toggle` = "popover",
+                    `data-trigger` = "hover",
+                    `data-placement` = "right",
+                    `data-content` = "Upload a single NetCDF file for CaSR v3.1 data."
+                  )
+                ),
+                accept = ".nc"
+      )
+    }
+  })
+  
   
   append_log <- function(msg) {
     isolate(log_txt(paste0(log_txt(), format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " – ", msg, "\n")))
   }
   
   # 1) Unzip + discover
-  observeEvent(input$nc_zip, {
-    req(input$nc_zip)
-    append_log("Unzipping archive…")
-    
-    td <- tempfile("ncdir_"); dir.create(td)
-    unzip(input$nc_zip$datapath, exdir = td)
-    temp_dir(td)
-    
-    ncs <- list.files(td, "\\.nc$", full.names = TRUE, recursive = TRUE)
-    if (!length(ncs)) return(append_log("No NetCDF files found."))
-    
-    nc <- nc_open(ncs[[1]])
-    all_vars <- names(nc$var)
-    
-    # Extract and filter variables
-    vars <- all_vars[!(grepl("lat", all_vars) | grepl("lon", all_vars) | grepl("rotated_pole", all_vars))]
-    available_vars(vars)
-    
-    # Extract units
-    available_units(as.list(sapply(vars, function(v) {
-      att <- ncatt_get(nc, v, "units")$value
-      if (is.null(att)) "" else att
-    }, USE.NAMES = TRUE)))
-    
-    # Try to set time zone offset based on lon variable
-    if ("lon" %in% all_vars) {
-      lon_vals <- ncvar_get(nc, "lon")
-      if (!is.null(lon_vals)) {
-        mean_lon <- mean(lon_vals, na.rm = TRUE)
-        tz_offset <- round(mean_lon / 15)  # Longitude to UTC offset
-        tz_offset<-ifelse(tz_offset<0,-tz_offset,-tz_offset)
-        updateNumericInput(session, "time_shift", value = tz_offset)
-        append_log(sprintf("Set default time shift to UTC %+d based on mean longitude %.2f.", tz_offset, mean_lon))
+  observeEvent({
+    input$nc_zip
+    input$nc_file
+    input$data_type
+  }, {
+    if (input$data_type == "rdrs") {
+      req(input$nc_zip)
+      append_log("Unzipping RDRS archive…")
+      td <- tempfile("ncdir_"); dir.create(td)
+      unzip(input$nc_zip$datapath, exdir = td)
+      temp_dir(td)
+      
+      ncs <- list.files(td, "\\.nc$", full.names = TRUE, recursive = TRUE)
+      if (!length(ncs)) {
+        append_log("No NetCDF files found in ZIP.")
+        return()
       }
+      
+      nc <- nc_open(ncs[[1]])
+      all_vars <- names(nc$var)
+      vars <- all_vars[!(grepl("lat", all_vars) | grepl("lon", all_vars) | grepl("rotated_pole", all_vars))]
+      available_vars(vars)
+      available_units(as.list(sapply(vars, function(v) {
+        att <- ncatt_get(nc, v, "units")$value
+        if (is.null(att)) "" else att
+      }, USE.NAMES = TRUE)))
+      
+      if ("lon" %in% all_vars) {
+        lon_vals <- ncvar_get(nc, "lon")
+        if (!is.null(lon_vals)) {
+          mean_lon <- mean(lon_vals, na.rm = TRUE)
+          tz_offset <- round(mean_lon / 15)
+          tz_offset <- ifelse(tz_offset < 0, -tz_offset, -tz_offset)
+          updateNumericInput(session, "time_shift", value = tz_offset)
+          append_log(sprintf("Set default time shift to UTC %+d based on mean longitude %.2f.", tz_offset, mean_lon))
+        }
+      }
+      nc_close(nc)
+      
+      append_log(sprintf("Found %d files, %d variables.", length(ncs), length(vars)))
     }
-    
-    nc_close(nc)
-    append_log(sprintf("Found %d files, %d variables.", length(ncs), length(vars)))
+    else if (input$data_type == "casr") {
+      req(input$nc_file)
+      append_log("Loading CaSR single NetCDF file…")
+      td <- tempfile("ncdir_"); dir.create(td)
+      file.copy(input$nc_file$datapath, file.path(td, basename(input$nc_file$name)))
+      temp_dir(td)
+      
+      nc <- nc_open(input$nc_file$datapath)
+      all_vars <- names(nc$var)
+      vars <- all_vars[!(grepl("lat", all_vars) | grepl("lon", all_vars) | grepl("rotated_pole", all_vars))]
+      available_vars(vars)
+      available_units(as.list(sapply(vars, function(v) {
+        att <- ncatt_get(nc, v, "units")$value
+        if (is.null(att)) "" else att
+      }, USE.NAMES = TRUE)))
+      
+      if ("lon" %in% all_vars) {
+        lon_vals <- ncvar_get(nc, "lon")
+        if (!is.null(lon_vals)) {
+          mean_lon <- mean(lon_vals, na.rm = TRUE)
+          tz_offset <- round(mean_lon / 15)
+          tz_offset <- ifelse(tz_offset < 0, -tz_offset, -tz_offset)
+          updateNumericInput(session, "time_shift", value = tz_offset)
+          append_log(sprintf("Set default time shift to UTC %+d based on mean longitude %.2f.", tz_offset, mean_lon))
+        }
+      }
+      nc_close(nc)
+      
+      append_log(sprintf("Loaded single NetCDF with %d variables.", length(vars)))
+    }
   })
   
   # 2) Input matrix
@@ -283,24 +347,35 @@ server <- function(input, output, session) {
     fs   <- vapply(seq_len(n), function(i) input[[sprintf("factor_%d",i)]], 1)
     
     withProgress(message = "Please wait, aggregation running…", {
-      # you can call incProgress() between major steps if you like:
       incProgress(0.1)
-      rdrs_ncdf_aggregator(
-        ncdir             = temp_dir(),
-        time_shift        = input$time_shift,
-        aggregationLength = input$agg_length,
-        var               = vars,
-        var_units         = us,
-        fun               = fns,
-        aggregationFactor = fs,
-        aggregate_gph     = input$agg_gph
-      )
+      if (input$data_type == "rdrs") {
+        rdrs_ncdf_aggregator(
+          ncdir             = temp_dir(),
+          time_shift        = input$time_shift,
+          aggregationLength = input$agg_length,
+          var               = vars,
+          var_units         = us,
+          fun               = fns,
+          aggregationFactor = fs,
+          aggregate_gph     = input$agg_gph
+        )
+      } else if (input$data_type == "casr") {
+        # Assuming you have casr_aggregator function sourced or defined
+        casr_aggregator(
+          ncfile            = file.path(temp_dir(), basename(input$nc_file$name)),
+          time_shift        = input$time_shift,
+          aggregationLength = input$agg_length,
+          var               = vars,
+          var_units         = us,
+          fun               = fns,
+          aggregationFactor = fs
+        )
+      }
       incProgress(0.8)
       
-      # load index, zip, etc.
       idxf <- file.path(outdir,"aggregation_procedure.csv")
       if (file.exists(idxf)) index_df(read.csv(idxf))
-      zipf <- file.path(temp_dir(),"rdrs_output.zip")
+      zipf <- file.path(temp_dir(),"output.zip")
       zip::zip(zipfile=zipf, files=list.files(outdir, full.names=TRUE, recursive=TRUE),
                mode="cherry-pick", root=outdir)
       result_zip(zipf); result_dir(outdir)
@@ -309,6 +384,7 @@ server <- function(input, output, session) {
     
     append_log("Aggregation & zip complete.")
   })
+  
   
   # 4) Average‐over‐time matrices
   avg_matrices <- reactive({
