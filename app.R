@@ -70,7 +70,7 @@ ui <- fluidPage(
     sidebarPanel(
             tags$p(
         "For more information and sample data ",
-        tags$a(href = "https://github.com/rarabzad/GridWeightsGenerator/tree/main",
+        tags$a(href = "https://github.com/rarabzad/NETCDF_TEMPORAL_AGGRIGATOR/tree/main",
                "click here", target = "_blank")
       ),
       # Add radio buttons to select data type
