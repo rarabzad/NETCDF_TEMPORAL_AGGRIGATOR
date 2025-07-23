@@ -1,4 +1,3 @@
-casr_aggregator(ncfile = "A_PR0_SFC_combined.nc",time_shift = 5)
 casr_aggregator <- function(
     ncfile,
     var = NULL,
