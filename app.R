@@ -59,11 +59,20 @@ ui <- fluidPage(
   tags$div(
     style = "display: flex; align-items: center; gap: 15px; margin-bottom: 20px;",
     tags$img(src = "logo.png", width = "100px", style = "border-radius: 20px;"),
-    tags$h2("RDRS NetCDF Aggregator", style = "margin: 0;")
+    tags$h2("NetCDF Temporal Aggregator", style = "margin: 0;"),
+    tags$p(
+  "This tool processes gridded climate data from two sources: (1) a ZIP archive of hourly RDRS v2.1 NetCDF files, or (2) a single CaSR v3.1 NetCDF file. After selecting variables, aggregation functions (sum, mean, min, max), output units, scaling factors, time shift, and aggregation period, it produces an aggregated NetCDF “RavenInput.nc,” a CSV index of the aggregation procedure, and a draft Raven “.rvt” file—packaged together in a downloadable ZIP.",
+  style = "font-size: 1.2em; color: #555;"
+)
   ),
   
   sidebarLayout(
     sidebarPanel(
+            tags$p(
+        "For more information and sample data ",
+        tags$a(href = "https://github.com/rarabzad/GridWeightsGenerator/tree/main",
+               "click here", target = "_blank")
+      ),
       # Add radio buttons to select data type
       radioButtons(
         inputId = "data_type",
@@ -153,13 +162,7 @@ ui <- fluidPage(
       
       actionButton("run", "Run Aggregation", icon = icon("play")),
       br(), br(),
-      downloadButton("download_results", "Download Results ZIP"),
-      br(), br(),
-      tags$p(
-        "For more information and sample data ",
-        tags$a(href = "https://github.com/rarabzad/GridWeightsGenerator/tree/main",
-               "click here", target = "_blank")
-      )
+      downloadButton("download_results", "Download Results ZIP")
     ),
     
     mainPanel(
