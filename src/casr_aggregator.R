@@ -6,7 +6,8 @@ casr_aggregator <- function(
     aggregationLength = NULL,
     aggregationFactor = NULL,
     var_units=NULL,
-    aggregate_gph = F)
+    aggregate_gph = F,
+    output_dir = ".")
 {
   # Check required packages
   required_pkgs <- c("ncdf4", "abind", "lubridate", "lutz")
@@ -22,7 +23,7 @@ casr_aggregator <- function(
   if (!file.exists(ncfile)) stop("NetCDF file not found: ", ncfile)
   nc <- tryCatch(nc_open(ncfile), error = function(e) stop("Failed to open NetCDF: ", e$message))
   
-  outputfile = "RavenInput.nc"
+  outputfile = file.path(output_dir, "RavenInput.nc")
   
   vars_all <- names(nc$var)
   dims_all <- names(nc$dim)
@@ -327,12 +328,13 @@ casr_aggregator <- function(
     }
     cat(
       rvt,
-      file   = file.path(dirname(outputfile), "model.rvt"),
+      file   = file.path(output_dir, "model.rvt"),
       sep    = "\n",
-      append = file.exists(file.path(dirname(outputfile), "model.rvt"))
+      append = file.exists(file.path(output_dir, "model.rvt"))
     )
   }
   nc_close(ncnew)
   nc_close(nc)
   message("✅ Aggregated NetCDF written to: ", outputfile)
+  return(normalizePath(outputfile))
 }
