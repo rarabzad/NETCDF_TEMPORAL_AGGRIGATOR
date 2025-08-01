@@ -56,7 +56,7 @@ rdrs_ncdf_aggregator<-function(ncdir,
                                fun="mean",
                                aggregationFactor=1,
                                aggregate_gph = F,
-                               output_dir = NULL))
+                               output_dir = NULL)
 {
   if(aggregate_gph) gp_var<-"RDRS_v2.1_P_GZ_SFC" else gp_var<-""
   if (is.null(output_dir)) {
