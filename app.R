@@ -409,6 +409,7 @@ server <- function(input, output, session) {
       return()
     }
     outdir <- file.path(temp_dir(), "output")
+    dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
     dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
     n    <- input$n_vars
     vars <- vapply(seq_len(n), function(i) input[[sprintf("var_%d",i)]], "")
@@ -437,35 +438,35 @@ server <- function(input, output, session) {
     withProgress(message = "Please wait, aggregation running…", {
       incProgress(0.1)
       if (input$data_type == "rdrs") {
-        tmp_output_dir <- tempdir()
-        nc_dir_path <- temp_dir()
-        if (is.null(nc_dir_path) || !dir.exists(nc_dir_path)) {
-          append_log("❌ NetCDF directory not found.")
-          showNotification("RDRS NetCDF directory is missing. Please re-upload the ZIP file.", type = "error")
-          return()
-        }
-        res <- tryCatch({
-          agg_file_path_value <- rdrs_ncdf_aggregator(
-            ncdir             = nc_dir_path,
-            time_shift        = input$time_shift,
-            aggregationLength = input$agg_length,
-            var               = vars,
-            var_units         = us,
-            fun               = fns,
-            aggregationFactor = fs,
-            aggregate_gph     = input$agg_gph,
-            output_dir        = tmp_output_dir
-          )
-          agg_file_path(agg_file_path_value)
-          outdir <- tempdir()
-          TRUE  
-        }, error = function(e) {
-          append_log(paste("❌ Error during RDRS aggregation:", e$message))
-          FALSE 
-        })
+      tmp_output_dir <- outdir
+      nc_dir_path <- temp_dir()
+      if (is.null(nc_dir_path) || !dir.exists(nc_dir_path)) {
+        append_log("❌ NetCDF directory not found.")
+        showNotification("RDRS NetCDF directory is missing. Please re-upload the ZIP file.", type = "error")
+        return()
+      }
+      res <- tryCatch({
+        agg_file_path_value <- rdrs_ncdf_aggregator(
+          ncdir             = nc_dir_path,
+          time_shift        = input$time_shift,
+          aggregationLength = input$agg_length,
+          var               = vars,
+          var_units         = us,
+          fun               = fns,
+          aggregationFactor = fs,
+          aggregate_gph     = input$agg_gph,
+          output_dir        = tmp_output_dir  # this is now outdir
+        )
+        agg_file_path(agg_file_path_value)
+        TRUE
+      }, error = function(e) {
+        append_log(paste("❌ Error during RDRS aggregation:", e$message))
+        FALSE
+      })
+
         if (!res) return()  # stop if error occurred
       } else if (input$data_type == "casr") {
-        tmp_output_dir <- tempdir()
+        tmp_output_dir <- outdir
         nc_path <- file.path(temp_dir(), basename(input$nc_file$name))
         if (!file.exists(nc_path)) {
           append_log("❌ CaSR NetCDF file not found.")
@@ -484,7 +485,6 @@ server <- function(input, output, session) {
             output_dir        = tmp_output_dir
           )
           agg_file_path(agg_file_path_value)
-          outdir <- tempdir()
           TRUE
         }, error = function(e) {
           append_log(paste("❌ Error during CaSR aggregation:", e$message))
@@ -595,3 +595,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
