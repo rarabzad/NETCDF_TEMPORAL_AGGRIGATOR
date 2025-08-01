@@ -7,6 +7,8 @@ library(fields)
 library(viridisLite)
 library(lubridate)
 library(progress)
+library(abind)
+library(lutz)
 
 # Source the aggregator function
 source("https://raw.githubusercontent.com/rarabzad/NETCDF_TEMPORAL_AGGRIGATOR/refs/heads/main/rdrs_ncdf_aggregator.R")
