@@ -378,19 +378,21 @@ server <- function(input, output, session) {
           var_units         = us,
           fun               = fns,
           aggregationFactor = fs,
-          aggregate_gph     = input$agg_gph
+          aggregate_gph     = input$agg_gph,
+          output_dir = tmp_output_dir
         )
       } else if (input$data_type == "casr") {
-        # Assuming you have casr_aggregator function sourced or defined
-        casr_aggregator(
-          ncfile            = file.path(temp_dir(), basename(input$nc_file$name)),
-          time_shift        = input$time_shift,
-          aggregationLength = input$agg_length,
-          var               = vars,
-          var_units         = us,
-          fun               = fns,
-          aggregationFactor = fs
-        )
+        tmp_output_dir <- tempdir()
+        agg_file_path <-
+          casr_aggregator(
+            ncfile            = file.path(temp_dir(), basename(input$nc_file$name)),
+            time_shift        = input$time_shift,
+            aggregationLength = input$agg_length,
+            var               = vars,
+            var_units         = us,
+            fun               = fns,
+            aggregationFactor = fs
+          )
       }
       incProgress(0.8)
       
@@ -410,7 +412,7 @@ server <- function(input, output, session) {
   # 4) Average‐over‐time matrices
   avg_matrices <- reactive({
     req(result_dir())
-    ncfile <- file.path(result_dir(), "RavenInput.nc")
+    ncfile <- agg_file_path
     nc     <- nc_open(ncfile)
     vns    <- setdiff(names(nc$var), c("lon","lat"))
     mats   <- lapply(vns, function(vn) apply(ncvar_get(nc, vn), 1:2, mean, na.rm=TRUE))
