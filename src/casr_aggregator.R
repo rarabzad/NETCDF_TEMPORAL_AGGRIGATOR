@@ -368,6 +368,3 @@ casr_aggregator <- function(
   message("✅ Aggregated NetCDF written to: ", outputfile)
   return(normalizePath(outputfile))
 }
-setwd("..")
-nc<-nc_open("CaSR_v3.1_A_TT_1.5m (2).nc")
-casr_aggregator(ncfile = "CaSR_v3.1_A_TT_1.5m (2).nc",var = "CaSR_v3.1_A_TT_1.5m",time_shift = 8,output_dir = getwd(),aggregationLength = 3)
