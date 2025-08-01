@@ -483,6 +483,8 @@ server <- function(input, output, session) {
             output_dir        = tmp_output_dir
           )
           agg_file_path(agg_file_path_value)
+          files_in_outdir <- list.files(outdir, recursive=TRUE)
+          append_log(paste("Files in output directory:", paste(files_in_outdir, collapse=", ")))
           TRUE
         }, error = function(e) {
           append_log(paste("❌ Error during CaSR aggregation:", e$message))
