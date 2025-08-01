@@ -10,6 +10,7 @@
 #' @param var_names Names for the variables in the output NetCDF file
 #' @param fun A vector specifying aggregation functions (sum, mean, min, max) corresponding for each variable
 #' @param aggregate_gph logical. To aggregate the geopotential variable or not (across all times)
+#' @param output_dir string. directory where to deposit the final product
 #' @return a time aggregated NetCDF file saved in the \code{outputfile}
 #' @export rdrs_ncdf_aggregator
 #' @importFrom lubridate ymd_hms floor_date
@@ -54,11 +55,16 @@ rdrs_ncdf_aggregator<-function(ncdir,
                                var_units=NULL,
                                fun="mean",
                                aggregationFactor=1,
-                               aggregate_gph = F)
+                               aggregate_gph = F,
+                               output_dir = NULL))
 {
   if(aggregate_gph) gp_var<-"RDRS_v2.1_P_GZ_SFC" else gp_var<-""
-  outdir<-paste0(ncdir,"/output")
-  if(!dir.exists(outdir)) dir.create(outdir)
+  if (is.null(output_dir)) {
+    outdir <- file.path(ncdir, "output")
+  } else {
+    outdir <- output_dir
+  }
+  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
   ncfiles<-list.files(ncdir,pattern = "\\d{8}12\\.nc$",full.names = T)
   if(length(ncfiles)==0) stop("No NetCDF files found in the 'ncdir'")
   nc<-nc_open(ncfiles[1])
@@ -327,4 +333,5 @@ rdrs_ncdf_aggregator<-function(ncdir,
   
   nc_close(ncnew)
   cat(paste("DONE: all output files are stored at:\n",outdir))
+  return(normalizePath(file.path(outdir, outputfile)))
 }
