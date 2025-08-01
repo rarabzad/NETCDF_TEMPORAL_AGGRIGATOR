@@ -89,7 +89,7 @@ casr_aggregator <- function(
     names(var_units)<-paste0(fun,"_",var)
   }
   if(!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-
+  
   if(is.null(aggregationFactor))
   {
     aggregationFactor<-rep(1,length(var))
@@ -222,8 +222,36 @@ casr_aggregator <- function(
                                                    missval = NaN,
                                                    prec="double")
   }
+  vars_space_only <- Filter(function(vname) {
+    dims <- sapply(nc$var[[vname]]$dim, function(d) d$name)
+    setequal(dims, space_dims)
+  }, vars_all)
   
+  if (length(vars_space_only) > 0) {
+    message("Including spatial-only variables in the output NetCDF: ", paste(vars_space_only, collapse = ", "))
+    for (vname in vars_space_only) {
+      vinfo <- nc$var[[vname]]
+      out_dims <- lapply(space_dims, function(dn) dim_defs[[dn]])
+      chunks <- sapply(space_dims, function(dn)
+        min(10, length(dim_defs[[dn]]$vals))
+      )
+      var_defs[[vname]] <- ncvar_def(
+        name = vname,
+        units = ncatt_get(nc, vname, "units")$value,
+        dim = out_dims,
+        missval = if (!is.null(vinfo$missval)) vinfo$missval else NA,
+        prec = "float",
+        chunksizes = chunks,
+        compression = 1
+      )
+    }
+  }
   ncnew <- nc_create(outputfile, var_defs)
+  for (vname in vars_space_only) {
+    message("Writing spatial-only variable: ", vname)
+    vals <- ncvar_get(nc, vname)
+    ncvar_put(ncnew, var_defs[[vname]], vals)
+  }                         
   for (i in seq_along(var))
   {
     cat(sprintf("aggregating period %s of: %s\n",func_names[i],var[i]))
