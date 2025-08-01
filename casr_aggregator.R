@@ -245,7 +245,7 @@ casr_aggregator <- function(
       names(space_count)<-names(space_dims)
       count<-c(time_count,space_count)
       count<-count[order(names(count))]
-      vals<-apply(ncvar_get(nc,var[i],start = start,count = count),1:2,fun[[var_names[i]]])*aggregationFactor[var_names[i]]
+      vals<-apply(ncvar_get(nc,var[i],start = start,count = count),1:2,fun[[var_names[i]]],na.rm=T)*aggregationFactor[var_names[i]]
       count[time_dim_id]<-1
       start[space_dim_id]<-1
       start[time_dim_id]<-t
