@@ -88,7 +88,8 @@ casr_aggregator <- function(
     if(!(is.vector(var_units) & length(var_units)==length(var))) stop("the length of the select variables and the vector of units must be the same!")
     names(var_units)<-paste0(fun,"_",var)
   }
-  
+  if(!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
   if(is.null(aggregationFactor))
   {
     aggregationFactor<-rep(1,length(var))
@@ -299,9 +300,9 @@ casr_aggregator <- function(
   ncatt_put(ncnew, 0, "location", "Waterloo, Canada")
   ncatt_put(ncnew, 0, "history", paste("Created on", Sys.time()))
   ncatt_put(ncnew, 0, "Conventions", "CF-1.6")
-  
-  writeLines(text = capture.output(ncnew),
-             con = file.path(dirname(outputfile), paste0(gsub(".nc","",outputfile),"_content.txt")))
+  content_filename <- paste0(tools::file_path_sans_ext(basename(outputfile)), "_content.txt")
+  content_filepath <- file.path(dirname(outputfile), content_filename)
+  writeLines(text = capture.output(ncnew), con = content_filepath)
   variableBlocks<-c(":GriddedForcing \t\t\t RavenVarName",
                     "\t:ForcingType \t\t\t RavenForcingType",
                     "\t:FileNameNC \t\t\t netcdf_path",
