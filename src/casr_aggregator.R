@@ -169,6 +169,7 @@ casr_aggregator <- function(
   for(t in 2:length(times_grouped)) new_times[t]<-times_grouped[[t]][1]
   group_keys <- sort(unique(gidx))
   new_tvals <- as.numeric(difftime(new_times, new_times[1], units = "secs")) / mult
+  write.csv(x = data.frame(time_origin=times,time_after_shift=new_times),file = file.path(output_dir,"aggregation_procedure.csv"))
   if (is.null(var))
   {
     var <- names(nc$var)[sapply(nc$var, function(v) {
