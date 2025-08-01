@@ -11,8 +11,8 @@ library(abind)
 library(lutz)
 
 # Source the aggregator function
-source("https://raw.githubusercontent.com/rarabzad/NETCDF_TEMPORAL_AGGRIGATOR/refs/heads/main/rdrs_ncdf_aggregator.R")
-source("https://raw.githubusercontent.com/rarabzad/NETCDF_TEMPORAL_AGGRIGATOR/refs/heads/main/casr_aggregator.R")
+source("https://raw.githubusercontent.com/rarabzad/NETCDF_TEMPORAL_AGGRIGATOR/refs/heads/main/src/rdrs_ncdf_aggregator.R")
+source("https://raw.githubusercontent.com/rarabzad/NETCDF_TEMPORAL_AGGRIGATOR/refs/heads/main/src/casr_aggregator.R")
 options(shiny.maxRequestSize = 500 * 1024^2)  # 500 MB limit
 ui <- fluidPage(
   useShinyjs(),
