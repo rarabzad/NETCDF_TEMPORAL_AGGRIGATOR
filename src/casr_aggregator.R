@@ -169,7 +169,7 @@ casr_aggregator <- function(
   for(t in 2:length(times_grouped)) new_times[t]<-times_grouped[[t]][1]
   group_keys <- sort(unique(gidx))
   new_tvals <- as.numeric(difftime(new_times, new_times[1], units = "secs")) / mult
-  write.csv(x = data.frame(time_origin=times,time_after_shift=new_times),file = file.path(output_dir,"aggregation_procedure.csv"))
+  write.csv(x = data.frame(time_origin=times+hours(time_shift),time_after_shift=times,group_id=gidx),file = file.path(output_dir,"aggregation_procedure.csv"))
   if (is.null(var))
   {
     var <- names(nc$var)[sapply(nc$var, function(v) {
@@ -368,3 +368,6 @@ casr_aggregator <- function(
   message("✅ Aggregated NetCDF written to: ", outputfile)
   return(normalizePath(outputfile))
 }
+setwd("..")
+nc<-nc_open("CaSR_v3.1_A_TT_1.5m (2).nc")
+casr_aggregator(ncfile = "CaSR_v3.1_A_TT_1.5m (2).nc",var = "CaSR_v3.1_A_TT_1.5m",time_shift = 8,output_dir = getwd(),aggregationLength = 3)
