@@ -249,7 +249,8 @@ server <- function(input, output, session) {
     if (input$data_type == "rdrs") {
       req(input$nc_zip)
       append_log("Unzipping RDRS archive…")
-      td <- tempfile("ncdir_"); dir.create(td)
+      td <- file.path("user_data", paste0("ncdir_", as.integer(Sys.time())))
+      dir.create(td, recursive = TRUE, showWarnings = FALSE)
       unzip(input$nc_zip$datapath, exdir = td)
       temp_dir(td)
       
