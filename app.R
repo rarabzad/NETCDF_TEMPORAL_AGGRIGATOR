@@ -512,10 +512,12 @@ server <- function(input, output, session) {
       } else {
         append_log("⚠️ Index file not found after aggregation.")
       }
-      zipf <- file.path(temp_dir(),"output.zip")
-      zip::zip(zipfile=zipf, files=list.files(outdir, full.names=TRUE, recursive=TRUE),
-               mode="cherry-pick", root=outdir)
-      result_zip(zipf); result_dir(outdir)
+      zipf <- tempfile("output_", fileext = ".zip")
+      zip::zip(zipfile = zipf,
+               files = list.files(outdir, full.names = TRUE, recursive = TRUE),
+               mode = "cherry-pick",
+               root = outdir)
+      result_zip(zipf)
       incProgress(0.1)
     })
     
@@ -595,4 +597,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
 
