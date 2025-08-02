@@ -409,7 +409,6 @@ server <- function(input, output, session) {
       return()
     }
     outdir <- file.path(temp_dir(), "output")
-    dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
     dir.create(outdir, recursive=TRUE, showWarnings=FALSE)
     n    <- input$n_vars
     vars <- vapply(seq_len(n), function(i) input[[sprintf("var_%d",i)]], "")
@@ -438,8 +437,7 @@ server <- function(input, output, session) {
     withProgress(message = "Please wait, aggregation running…", {
       incProgress(0.1)
       if (input$data_type == "rdrs") {
-        outdir <- file.path(temp_dir(), "output")
-        dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+        tmp_output_dir <- tempdir()
         nc_dir_path <- temp_dir()
         if (is.null(nc_dir_path) || !dir.exists(nc_dir_path)) {
           append_log("❌ NetCDF directory not found.")
@@ -456,17 +454,18 @@ server <- function(input, output, session) {
             fun               = fns,
             aggregationFactor = fs,
             aggregate_gph     = input$agg_gph,
-            output_dir        = outdir             # ✅ FIXED HERE
+            output_dir        = tmp_output_dir
           )
           agg_file_path(agg_file_path_value)
-          TRUE
+          outdir <- tempdir()
+          TRUE  
         }, error = function(e) {
           append_log(paste("❌ Error during RDRS aggregation:", e$message))
           FALSE 
         })
-        if (!res) return()
+        if (!res) return()  # stop if error occurred
       } else if (input$data_type == "casr") {
-        tmp_output_dir <- outdir
+        tmp_output_dir <- tempdir()
         nc_path <- file.path(temp_dir(), basename(input$nc_file$name))
         if (!file.exists(nc_path)) {
           append_log("❌ CaSR NetCDF file not found.")
@@ -485,6 +484,7 @@ server <- function(input, output, session) {
             output_dir        = tmp_output_dir
           )
           agg_file_path(agg_file_path_value)
+          outdir <- tempdir()
           TRUE
         }, error = function(e) {
           append_log(paste("❌ Error during CaSR aggregation:", e$message))
@@ -492,7 +492,7 @@ server <- function(input, output, session) {
         })
         if (!res) return()
       }
-      
+
       if (is.null(agg_file_path()) || agg_file_path() == "") {
         append_log("❌ Aggregation failed: output file path is empty.")
         showNotification("Aggregation failed: output file not created.", type = "error")
@@ -512,12 +512,10 @@ server <- function(input, output, session) {
       } else {
         append_log("⚠️ Index file not found after aggregation.")
       }
-      zipf <- tempfile("output_", fileext = ".zip")
-      zip::zip(zipfile = zipf,
-               files = list.files(outdir, full.names = TRUE, recursive = TRUE),
-               mode = "cherry-pick",
-               root = outdir)
-      result_zip(zipf)
+      zipf <- file.path(temp_dir(),"output.zip")
+      zip::zip(zipfile=zipf, files=list.files(outdir, full.names=TRUE, recursive=TRUE),
+               mode="cherry-pick", root=outdir)
+      result_zip(zipf); result_dir(outdir)
       incProgress(0.1)
     })
     
@@ -597,4 +595,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
