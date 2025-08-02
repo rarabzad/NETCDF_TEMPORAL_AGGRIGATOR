@@ -492,7 +492,7 @@ server <- function(input, output, session) {
         })
         if (!res) return()
       }
-
+      
       if (is.null(agg_file_path()) || agg_file_path() == "") {
         append_log("❌ Aggregation failed: output file path is empty.")
         showNotification("Aggregation failed: output file not created.", type = "error")
@@ -520,8 +520,130 @@ server <- function(input, output, session) {
     })
     
     append_log("Aggregation & zip complete.")
+  })observeEvent(input$run, {
+    req(temp_dir(), available_vars())
+    
+    # 1️⃣ Define one output folder under the unzipped data directory
+    tmp_output_dir <- file.path(temp_dir(), "output")
+    dir.create(tmp_output_dir, recursive = TRUE, showWarnings = FALSE)
+    
+    # 2️⃣ Validate inputs (unchanged from your original code) …
+    n <- input$n_vars
+    if (is.null(n) || n < 1) {
+      showNotification("Number of variables to aggregate must be at least 1.", type = "error")
+      append_log("❌ Invalid number of variables (n_vars) entered.")
+      return()
+    }
+    vars <- vapply(seq_len(n), function(i) input[[sprintf("var_%d", i)]], "")
+    if (all(vars == "")) {
+      append_log("❌ No variables selected for aggregation.")
+      showNotification("Please select at least one variable to aggregate.", type = "error", duration = 5)
+      return()
+    }
+    if (!is.numeric(input$time_shift)) {
+      showNotification("Time shift must be numeric.", type = "error")
+      append_log("❌ Invalid input: time_shift must be numeric.")
+      return()
+    }
+    if (!is.numeric(input$agg_length) || input$agg_length <= 0) {
+      showNotification("Aggregation length must be a positive number.", type = "error")
+      append_log("❌ Invalid input: aggregation length must be > 0.")
+      return()
+    }
+    fns <- vapply(seq_len(n), function(i) input[[sprintf("fun_%d", i)]], "")
+    if (!all(fns %in% c("sum", "mean", "min", "max"))) {
+      showNotification("Aggregation function must be one of: sum, mean, min, max.", type = "error")
+      append_log("❌ Invalid aggregation function selected.")
+      return()
+    }
+    fs <- vapply(seq_len(n), function(i) input[[sprintf("factor_%d", i)]], 1)
+    if (any(is.na(fs)) || any(fs < 0)) {
+      showNotification("All scaling factors must be numeric and non-negative.", type = "error")
+      append_log("❌ Invalid scaling factors: must be non-negative numbers and not NA.")
+      return()
+    }
+    us <- vapply(seq_len(n), function(i) input[[sprintf("unit_%d", i)]], "")
+    if (any(vars == "" | !(vars %in% available_vars()))) {
+      append_log("❌ One or more variables are invalid or not selected.")
+      showNotification("Please select valid variables for all entries.", type = "error")
+      return()
+    }
+    
+    # 3️⃣ Run aggregation
+    withProgress(message = "Please wait, aggregation running…", {
+      incProgress(0.1)
+      if (input$data_type == "rdrs") {
+        res <- tryCatch({
+          agg_file_path_value <- rdrs_ncdf_aggregator(
+            ncdir             = temp_dir(),
+            time_shift        = input$time_shift,
+            aggregationLength = input$agg_length,
+            var               = vars,
+            var_units         = us,
+            fun               = fns,
+            aggregationFactor = fs,
+            aggregate_gph     = input$agg_gph,
+            output_dir        = tmp_output_dir
+          )
+          agg_file_path(agg_file_path_value)
+          TRUE
+        }, error = function(e) {
+          append_log(paste("❌ Error during RDRS aggregation:", e$message))
+          FALSE
+        })
+        if (!res) return()
+      } else if (input$data_type == "casr") {
+        res <- tryCatch({
+          nc_path <- file.path(temp_dir(), basename(input$nc_file$name))
+          agg_file_path_value <- casr_aggregator(
+            ncfile            = nc_path,
+            time_shift        = input$time_shift,
+            aggregationLength = input$agg_length,
+            var               = vars,
+            var_units         = us,
+            fun               = fns,
+            aggregationFactor = fs,
+            output_dir        = tmp_output_dir
+          )
+          agg_file_path(agg_file_path_value)
+          TRUE
+        }, error = function(e) {
+          append_log(paste("❌ Error during CaSR aggregation:", e$message))
+          FALSE
+        })
+        if (!res) return()
+      }
+      incProgress(0.8)
+    })
+    
+    append_log("✅ Aggregation complete.")
+    
+    # 4️⃣ Read the aggregation index CSV from the same folder
+    idx_csv <- file.path(tmp_output_dir, "aggregation_procedure.csv")
+    if (file.exists(idx_csv)) {
+      index_df(read.csv(idx_csv))
+    } else {
+      append_log("⚠️ Index CSV not found in output folder.")
+      showNotification("Index file missing; aggregation may have failed.", type = "warning")
+    }
+    
+    # 5️⃣ Zip all output files in tmp_output_dir
+    zipf <- file.path(tmp_output_dir, "results.zip")
+    tryCatch({
+      zip::zip(
+        zipfile = zipf,
+        files   = list.files(tmp_output_dir, full.names = TRUE, recursive = TRUE),
+        mode    = "cherry-pick",
+        root    = tmp_output_dir
+      )
+      result_zip(zipf)
+      result_dir(tmp_output_dir)
+      append_log("✅ ZIP created successfully.")
+    }, error = function(e) {
+      append_log(paste("❌ Error creating ZIP:", e$message))
+      showNotification("Could not create results ZIP.", type = "error")
+    })
   })
-  
   
   # 4) Average‐over‐time matrices
   avg_matrices <- reactive({
