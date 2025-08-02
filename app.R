@@ -438,33 +438,33 @@ server <- function(input, output, session) {
     withProgress(message = "Please wait, aggregation running…", {
       incProgress(0.1)
       if (input$data_type == "rdrs") {
-      tmp_output_dir <- outdir
-      nc_dir_path <- temp_dir()
-      if (is.null(nc_dir_path) || !dir.exists(nc_dir_path)) {
-        append_log("❌ NetCDF directory not found.")
-        showNotification("RDRS NetCDF directory is missing. Please re-upload the ZIP file.", type = "error")
-        return()
-      }
-      res <- tryCatch({
-        agg_file_path_value <- rdrs_ncdf_aggregator(
-          ncdir             = nc_dir_path,
-          time_shift        = input$time_shift,
-          aggregationLength = input$agg_length,
-          var               = vars,
-          var_units         = us,
-          fun               = fns,
-          aggregationFactor = fs,
-          aggregate_gph     = input$agg_gph,
-          output_dir        = tmp_output_dir  # this is now outdir
-        )
-        agg_file_path(agg_file_path_value)
-        TRUE
-      }, error = function(e) {
-        append_log(paste("❌ Error during RDRS aggregation:", e$message))
-        FALSE
-      })
-
-        if (!res) return()  # stop if error occurred
+        outdir <- file.path(temp_dir(), "output")
+        dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+        nc_dir_path <- temp_dir()
+        if (is.null(nc_dir_path) || !dir.exists(nc_dir_path)) {
+          append_log("❌ NetCDF directory not found.")
+          showNotification("RDRS NetCDF directory is missing. Please re-upload the ZIP file.", type = "error")
+          return()
+        }
+        res <- tryCatch({
+          agg_file_path_value <- rdrs_ncdf_aggregator(
+            ncdir             = nc_dir_path,
+            time_shift        = input$time_shift,
+            aggregationLength = input$agg_length,
+            var               = vars,
+            var_units         = us,
+            fun               = fns,
+            aggregationFactor = fs,
+            aggregate_gph     = input$agg_gph,
+            output_dir        = outdir             # ✅ FIXED HERE
+          )
+          agg_file_path(agg_file_path_value)
+          TRUE
+        }, error = function(e) {
+          append_log(paste("❌ Error during RDRS aggregation:", e$message))
+          FALSE 
+        })
+        if (!res) return()
       } else if (input$data_type == "casr") {
         tmp_output_dir <- outdir
         nc_path <- file.path(temp_dir(), basename(input$nc_file$name))
@@ -492,7 +492,7 @@ server <- function(input, output, session) {
         })
         if (!res) return()
       }
-
+      
       if (is.null(agg_file_path()) || agg_file_path() == "") {
         append_log("❌ Aggregation failed: output file path is empty.")
         showNotification("Aggregation failed: output file not created.", type = "error")
@@ -597,5 +597,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
 
