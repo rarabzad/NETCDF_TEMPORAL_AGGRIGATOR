@@ -371,14 +371,15 @@ server <- function(input, output, session) {
   })
   # 3) Run, zip, load index
   # 3) Run, zip, load index
+  # 3) Run, zip, load index
   observeEvent(input$run, {
     req(temp_dir(), available_vars())
     
-    # ─── 1️⃣ Create one consistent output folder ────────────────────────────────
-    tmp_output_dir <- file.path(temp_dir(), "output")
+    # ─── 1️⃣ Create one consistent output folder in tempdir() ────────────────
+    tmp_output_dir <- file.path(tempdir(), "output")
     dir.create(tmp_output_dir, recursive = TRUE, showWarnings = FALSE)
     
-    # ─── 2️⃣ Validate inputs ───────────────────────────────────────────────────
+    # ─── 2️⃣ Validate inputs ─────────────────────────────────────────────────
     n <- input$n_vars
     if (is.null(n) || n < 1) {
       showNotification("Number of variables to aggregate must be at least 1.", type = "error")
@@ -402,7 +403,7 @@ server <- function(input, output, session) {
       return()
     }
     fns <- vapply(seq_len(n), function(i) input[[sprintf("fun_%d", i)]], "")
-    if (!all(fns %in% c("sum", "mean", "min", "max"))) {
+    if (!all(fns %in% c("sum","mean","min","max"))) {
       showNotification("Aggregation function must be one of: sum, mean, min, max.", type = "error")
       append_log("❌ Invalid aggregation function selected.")
       return()
@@ -410,7 +411,7 @@ server <- function(input, output, session) {
     fs <- vapply(seq_len(n), function(i) input[[sprintf("factor_%d", i)]], 1)
     if (any(is.na(fs)) || any(fs < 0)) {
       showNotification("All scaling factors must be numeric and non-negative.", type = "error")
-      append_log("❌ Invalid scaling factors: must be non-negative numbers and not NA.")
+      append_log("❌ Invalid scaling factors.")
       return()
     }
     us <- vapply(seq_len(n), function(i) input[[sprintf("unit_%d", i)]], "")
@@ -420,7 +421,7 @@ server <- function(input, output, session) {
       return()
     }
     
-    # ─── 3️⃣ Run the aggregator ────────────────────────────────────────────────
+    # ─── 3️⃣ Run the aggregator ─────────────────────────────────────────────────
     withProgress(message = "Please wait, aggregation running…", {
       incProgress(0.1)
       if (input$data_type == "rdrs") {
@@ -443,7 +444,7 @@ server <- function(input, output, session) {
           FALSE
         })
         if (!res) return()
-      } else {  # casr
+      } else {
         res <- tryCatch({
           nc_path <- file.path(temp_dir(), basename(input$nc_file$name))
           agg_file_path_value <- casr_aggregator(
@@ -469,7 +470,7 @@ server <- function(input, output, session) {
     
     append_log("✅ Aggregation complete.")
     
-    # ─── 4️⃣ Load the CSV index ────────────────────────────────────────────────
+    # ─── 4️⃣ Load the aggregation index CSV ────────────────────────────────────
     idx_csv <- file.path(tmp_output_dir, "aggregation_procedure.csv")
     if (file.exists(idx_csv)) {
       index_df(read.csv(idx_csv))
@@ -478,7 +479,7 @@ server <- function(input, output, session) {
       showNotification("Index file missing; aggregation may have failed.", type = "warning")
     }
     
-    # ─── 5️⃣ Zip all outputs for download ──────────────────────────────────────
+    # ─── 5️⃣ Zip all outputs for download ─────────────────────────────────────
     zipf <- file.path(tmp_output_dir, "results.zip")
     tryCatch({
       zip::zip(
