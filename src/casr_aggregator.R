@@ -237,7 +237,7 @@ casr_aggregator <- function(
       )
       var_defs[[vname]] <- ncvar_def(
         name = vname,
-        units = ncatt_get(nc, vname, "units")$value,
+        units = nc$var[[vname]]$dim[[1]]$units,
         dim = out_dims,
         missval = if (!is.null(vinfo$missval)) vinfo$missval else NA,
         prec = "float",
