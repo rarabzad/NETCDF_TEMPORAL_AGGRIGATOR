@@ -23,7 +23,7 @@ casr_aggregator <- function(
   if (!file.exists(ncfile)) stop("NetCDF file not found: ", ncfile)
   nc <- tryCatch(nc_open(ncfile), error = function(e) stop("Failed to open NetCDF: ", e$message))
   
-  outputfile = file.path(output_dir, "RavenInput.nc")
+  outputfile = paste0(sub(".nc","",basename(ncfile)),"_aggregated.nc")
   
   vars_all <- names(nc$var)
   dims_all <- names(nc$dim)
