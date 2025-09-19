@@ -69,7 +69,7 @@ rdrs_ncdf_aggregator<-function(ncdir,
   if(length(ncfiles)==0) stop("No NetCDF files found in the 'ncdir'")
   nc<-nc_open(ncfiles[1])
   periodStartTime<-0
-  outputfile<-"RavenInput.nc"
+  outputfile<-paste0(sub(".nc","",basename(ncfile)),"_aggregated.nc")
   timestamps<-ymd_hms(paste0(gsub(".nc","",basename(ncfiles)),"0000"),tz = "UTC")
   start_date <- min(timestamps)
   end_date <- max(timestamps)
@@ -314,7 +314,7 @@ rdrs_ncdf_aggregator<-function(ncdir,
   for(i in 1:(length(vars)-2))
   {
     variableBlocks_tmp<-variableBlocks
-    variableBlocks_tmp<-gsub("netcdf_path",outputfile,variableBlocks_tmp)
+    variableBlocks_tmp<-gsub("netcdf_path",basename(outputfile),variableBlocks_tmp)
     variableBlocks_tmp<-gsub("var_name",vars[[i+2]]$name,variableBlocks_tmp)
     if(gp_var != "")
     {
