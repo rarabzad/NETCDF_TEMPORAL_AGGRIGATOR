@@ -479,7 +479,7 @@ server <- function(input, output, session) {
     tryCatch({
       zip::zip(
         zipfile = zipf,
-        files   = c(list.files(tmp_output_dir, full.names = TRUE, recursive = TRUE),agg_file_path())
+        files   = list.files(tmp_output_dir, full.names = TRUE, recursive = TRUE)
         mode    = "cherry-pick",
         root    = tmp_output_dir
       )
@@ -564,4 +564,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
 
