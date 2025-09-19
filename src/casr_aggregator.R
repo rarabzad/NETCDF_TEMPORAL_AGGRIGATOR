@@ -349,7 +349,7 @@ casr_aggregator <- function(
   for(i in 1:(length(var)))
   {
     variableBlocks_tmp<-variableBlocks
-    variableBlocks_tmp<-gsub("netcdf_path",outputfile,variableBlocks_tmp)
+    variableBlocks_tmp<-gsub("netcdf_path",basename(outputfile),variableBlocks_tmp)
     variableBlocks_tmp<-gsub("var_name",var_names[i],variableBlocks_tmp)
     if(!is.null(gp_var))
     {
