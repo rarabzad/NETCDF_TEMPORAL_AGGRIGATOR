@@ -236,13 +236,9 @@ server <- function(input, output, session) {
 '))
     )
   })
-  
-  
   append_log <- function(msg) {
     isolate(log_txt(paste0(log_txt(), format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " – ", msg, "\n")))
   }
-  
-  # 1) Unzip + discover
   observeEvent({
     input$nc_zip
     input$nc_file
@@ -270,7 +266,6 @@ server <- function(input, output, session) {
         showNotification("No NetCDF (.nc) files found in the uploaded ZIP. Please check the archive structure.", type = "error", duration = 6)
         return()
       }
-      
       nc <- nc_open(ncs[[1]])
       all_vars <- names(nc$var)
       vars <- all_vars[!(grepl("lat", all_vars) | grepl("lon", all_vars) | grepl("rotated_pole", all_vars))]
@@ -484,7 +479,7 @@ server <- function(input, output, session) {
     tryCatch({
       zip::zip(
         zipfile = zipf,
-        files   = list.files(tmp_output_dir, full.names = TRUE, recursive = TRUE),
+        files   = c(list.files(tmp_output_dir, full.names = TRUE, recursive = TRUE),agg_file_path())
         mode    = "cherry-pick",
         root    = tmp_output_dir
       )
@@ -569,3 +564,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
