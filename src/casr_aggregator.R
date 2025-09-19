@@ -232,6 +232,7 @@ casr_aggregator <- function(
     for (vname in vars_space_only)
     {
       vinfo <- nc$var[[vname]]
+      space_dims<-space_dims[match(space_dims,unlist(lapply(vinfo$dim,function(x) x$name)))]
       out_dims <- lapply(space_dims, function(dn) dim_defs[[dn]])
       chunks <- sapply(space_dims, function(dn)
         min(10, length(dim_defs[[dn]]$vals))
