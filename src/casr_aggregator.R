@@ -229,7 +229,8 @@ casr_aggregator <- function(
   
   if (length(vars_space_only) > 0) {
     message("Including spatial-only variables in the output NetCDF: ", paste(vars_space_only, collapse = ", "))
-    for (vname in vars_space_only) {
+    for (vname in vars_space_only)
+    {
       vinfo <- nc$var[[vname]]
       out_dims <- lapply(space_dims, function(dn) dim_defs[[dn]])
       chunks <- sapply(space_dims, function(dn)
@@ -276,7 +277,11 @@ casr_aggregator <- function(
       names(space_count)<-names(space_dims)
       count<-c(time_count,space_count)
       count<-count[order(names(count))]
-      vals<-apply(ncvar_get(nc,var[i],start = start,count = count),1:2,fun[[var_names[i]]],na.rm=T)*aggregationFactor[var_names[i]]
+      vals<-ncvar_get(nc,var[i],start = start,count = count)
+      vals<-do.call(`[`, c(list(vals), replace(rep(list(TRUE), length(dim(vals))), time_dim_id, list(!apply(is.na(vals),time_dim_id,all))), list(drop=FALSE)))
+      vals<-suppressWarnings(apply(vals,sort(space_dim_id),fun[[var_names[i]]],na.rm=F)*aggregationFactor[var_names[i]])
+      vals[is.infinite(vals)]<-NA
+      vals[is.nan(vals)]<-NA
       count[time_dim_id]<-1
       start[space_dim_id]<-1
       start[time_dim_id]<-t
@@ -315,10 +320,10 @@ casr_aggregator <- function(
       names(space_count)<-names(space_dims)
       count<-c(time_count,space_count)
       count<-count[order(names(count))]
-      gph_vals[[t]]<-apply(ncvar_get(nc,gp_var,start = start,count =count),1:2,mean)
+      gph_vals[[t]]<-apply(ncvar_get(nc,gp_var,start = start,count =count),sort(space_dim_id),mean)
       setTxtProgressBar(pb_time, t)  # Update inner progress bar
     }
-    gph<-apply(array(unlist(gph_vals), dim = c(nrow(gph_vals[[1]]), ncol(gph_vals[[1]]), length(gph_vals))),1:2,mean)
+    gph<-apply(array(unlist(gph_vals), dim = c(nrow(gph_vals[[1]]), ncol(gph_vals[[1]]), length(gph_vals))),sort(space_dim_id),mean)
     gpe<-geo2ele(gph)
     ncvar_put(nc = ncnew,varid = var_defs$Geopotential_Elevation,vals = gpe)
   }
