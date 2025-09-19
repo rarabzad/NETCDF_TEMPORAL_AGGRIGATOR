@@ -477,12 +477,11 @@ server <- function(input, output, session) {
     # ─── 5️⃣ Zip all outputs for download ─────────────────────────────────────
     zipf <- file.path(tmp_output_dir, "results.zip")
     tryCatch({
-      zip_files <- list.files(tmp_output_dir, full.names = TRUE, recursive = TRUE)
-      agg_file <- agg_file_path()
-      if (!agg_file %in% zip_files) zip_files <- c(zip_files, agg_file)
-      zip::zip(
-        zipfile = zipf,
-        files   = zip_files)
+    zipf <- file.path(tmp_output_dir, "results.zip")
+    zip_temp_dir <- file.path(tempdir(), "zip_flat"); dir.create(zip_temp_dir, showWarnings = FALSE)
+    zip_files <- unique(c(list.files(tmp_output_dir, full.names = TRUE, recursive = TRUE),agg_file_path()))
+    file.copy(zip_files, file.path(zip_temp_dir, basename(zip_files)), overwrite = TRUE)
+    zip::zip(zipfile = zipf, files = list.files(zip_temp_dir, full.names = TRUE))
       result_zip(zipf)
       result_dir(tmp_output_dir)
       append_log("✅ ZIP created successfully.")
@@ -564,6 +563,7 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
 
 
 
